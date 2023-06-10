@@ -8,13 +8,13 @@ class EuRemesa {
     public static function active()
     {
         update_option('eu_remesa_pending', '[]');
-        //add_action('init', array('WP_Subsk', 'create_subs_type'));
-        //add_action('admin_head', array('WP_Subsk', 'insert_uicomponents'));
-        //add_action('add_meta_boxes_subs_types', array('WP_Subsk', 'create_metas'));
+        update_option('eu_remesa_rates', self::$default_rate);
+        update_option('eu_remesa_founds', self::$default_found);
     }
 
     public static function deactive()
     {
+        
     }
 
     public static function init()
@@ -23,8 +23,24 @@ class EuRemesa {
         add_action('admin_menu', ['EuRemesa','admin_menu']);
         add_action('wp_ajax_save_rate', ['EuRemesa','save_rate']);
         add_action('wp_ajax_save_found', ['EuRemesa','save_found']);
-        add_action('wp_ajax_get_founds', ['EuRemesa','get_founds']);
+        add_action('wp_ajax_get_rate', ['EuRemesa','get_rate']);
+        add_action('wp_ajax_get_found', ['EuRemesa','get_found']);
+        add_action('wp_ajax_get_found_of', ['EuRemesa','get_found_of']);
         add_action('wp_ajax_send_confirm', ['EuRemesa','send_confirm']);
+    }
+
+    public static function create_token(){
+        return 123;
+    }
+
+    public static function get_rate(){
+        echo get_option('eu_remesa_rates', self::$default_rate);
+        die();
+    }
+
+    public static function get_found(){
+        echo get_option('eu_remesa_founds', self::$default_found);
+        die();
     }
 
     public static function send_confirm(){
@@ -44,7 +60,7 @@ class EuRemesa {
         die();        
     }
 
-    public static function get_founds(){
+    public static function get_found_of(){
         $mount      = floatval( $_POST['mount'] );
         $currency   = $_POST['currency'];
         $founds     = json_decode( get_option('eu_remesa_founds', EuRemesa::$default_found), true );
@@ -110,13 +126,14 @@ class EuRemesa {
             "manage_options",
             "menu-remesa",
             function(){
-                EuAppTemplate::admin_menu();
+                ?>
+                    <iframe width="100%" height="800px" src="<?=get_site_url().'/wp-content/plugins/eu-remesa/app.php?template=admin_menu&token='.self::create_token()?>"></iframe>
+                <?php 
             },
             "",
             6
         );
     }
-
     
 
 }
