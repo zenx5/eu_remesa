@@ -27,10 +27,26 @@ class EuRemesa {
         add_action('wp_ajax_get_found', ['EuRemesa','get_found']);
         add_action('wp_ajax_get_found_of', ['EuRemesa','get_found_of']);
         add_action('wp_ajax_send_confirm', ['EuRemesa','send_confirm']);
+        add_action('wp_ajax_get_confirms', ['EuRemesa','get_confirms']);
+        add_action('wp_ajax_reset_all', ['EuRemesa','reset_all']);
     }
 
     public static function create_token(){
         return 123;
+    }
+
+    public static function reset_all(){
+        update_option('eu_remesa_pending', '[]');
+        update_option('eu_remesa_confirms', '[]');
+        update_option('eu_remesa_rates', self::$default_rate);
+        update_option('eu_remesa_founds', self::$default_found);
+        echo 1;
+        die();
+    }
+
+    public static function get_confirms(){
+        echo get_option('eu_remesa_confirms','[]');
+        die();
     }
 
     public static function get_rate(){
@@ -44,10 +60,12 @@ class EuRemesa {
     }
 
     public static function send_confirm(){
-        if( isset($_POST['currency']) && isset($_POST['mount']) && isset($_POST['reference'])  ){
+        if( isset($_POST['currency_from']) && isset($_POST['mount_from']) && isset($_POST['reference'])  ){
             $confirm = [
-                "currency" => $_POST['currency'],
-                "mount" => $_POST['mount'],
+                "currency_from" => $_POST['currency_from'],
+                "mount_from" => $_POST['mount_from'],
+                "currency_to" => $_POST['currency_to'],
+                "mount_to" => $_POST['mount_to'],
                 "reference" => $_POST['reference']
             ];
             $confirms = json_decode( get_option('eu_remesa_confirms','[]'), true );
@@ -127,7 +145,7 @@ class EuRemesa {
             "menu-remesa",
             function(){
                 ?>
-                    <iframe width="100%" height="800px" src="<?=get_site_url().'/wp-content/plugins/eu-remesa/app.php?template=admin_menu&token='.self::create_token()?>"></iframe>
+                    <iframe width="100%" height="800px" src="<?=get_site_url().'/wp-content/plugins/eu-remesa/app.php?template=admin_menu&type=php&script=base,root,admin&token='.self::create_token()?>"></iframe>
                 <?php 
             },
             "",
