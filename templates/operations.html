@@ -1,0 +1,21 @@
+<div id="history-admin-app" style="width:100%">
+    <h2>Operaciones</h2>
+    <v-list>
+        <span v-if="confirms.length===0">Empty</span>
+        <v-list-item
+            v-for="item in confirms"
+            :key="item.id"
+            variant="plain"
+        >
+            <template v-slot:title>
+                <span>Numero de referencia: {{item.reference}}</span>
+            </template>
+            <template v-slot:subtitle>
+                <span style="display:flex; flex-direction:column; padding-left:20px;">
+                    <span>Monto recibido: {{item.mount_from}} ({{item.currency_from}})</span>
+                    <span>Monto entregado: {{item.mount_to}} ({{item.currency_to}})</span>
+                </span>
+            </template>
+        </v-list-item>
+    </v-list>
+</div>

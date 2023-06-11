@@ -1,0 +1,14 @@
+<div id="found-admin-app" style="width:30%">
+    <h2>Fondos</h2>
+    <v-text-field
+        v-for="(entity, tag) in entities"
+        type="number"
+        variant="outlined"
+        min="0"
+        v-model="entities[tag]">
+        <template v-slot:prepend>
+            <span>Fondos para {{tag.toUpperCase()}}</span>
+        </template>
+    </v-text-field>
+    <v-btn variant="outlined" color="primary" style="width:100%" :loading="loading" @click="saveEntityValue">Guardar</v-btn>
+</div>

@@ -1,0 +1,14 @@
+<div id="rate-admin-app" style="width:30%">
+    <h2>Tasas</h2>
+    <v-text-field
+        v-for="(entity, tag) in entities"
+        type="number"
+        variant="outlined"
+        min="1"
+        v-model="entities[tag]">
+        <template v-slot:prepend>
+            <span>Valor del {{tag.toUpperCase()}}</span>
+        </template>
+    </v-text-field>
+    <v-btn variant="outlined" color="primary" style="width:100%" :loading="loading" @click="saveEntityValue">Guardar</v-btn>
+</div>
