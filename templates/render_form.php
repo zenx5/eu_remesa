@@ -119,7 +119,7 @@
                         headers:{
                             'Content-Type':'application/x-www-form-urlencoded'
                         },
-                        body:`action=get_founds&currency=${currency}&mount=${mount}`
+                        body:`action=get_found_of&currency=${currency}&mount=${mount}`
                     })
                     const result = await response.json()
                     console.log( result, this.mountReceived )
@@ -150,7 +150,7 @@
                             headers:{
                                 'Content-Type':'application/x-www-form-urlencoded'
                             },
-                            body:`action=send_confirm&currency=${this.getFromCurrency}&mount=${this.mount}&reference=${this.reference}`
+                            body:`action=send_confirm&currency_from=${this.getFromCurrency}&mount_from=${this.mount}&currency_to=${this.getToCurrency}&mount_to=${this.mountReceived}&reference=${this.reference}`
                         })
                         const result = await response.json()
                         this.message = result.message
