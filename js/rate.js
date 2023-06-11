@@ -1,10 +1,3 @@
-
-const { createApp } = Vue;
-const { createVuetify } = Vuetify;
-const vuetify = createVuetify();
-
-const token = sessionStorage.getItem('eu_token')
-
 const appTemplate = (entity) => ({
     data(){
         return {
@@ -20,7 +13,9 @@ const appTemplate = (entity) => ({
             },
             body:`action=get_${entity}&token=${token}`
         })
-        this.entities = await response.json()
+        const result = await response.json()
+        console.log( result )
+        this.entities = result
     },
     methods:{
         async saveEntityValue(){
@@ -42,9 +37,4 @@ const appTemplate = (entity) => ({
     }
 })
 
-createApp(appTemplate('rate'))
-    .use(vuetify)
-    .mount('#rate-admin-app')
-createApp(appTemplate('found'))
-    .use(vuetify)
-    .mount('#found-admin-app')
+createApp(appTemplate('rate')).use(vuetify).mount('#rate-admin-app')
