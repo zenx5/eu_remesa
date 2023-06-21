@@ -1,0 +1,103 @@
+<div id="changes">
+    <div style="display: flex; flex-direction: row; gap:5px; align-items: center;">
+        <v-text-field label="Currency From" v-model="currencyFrom"></v-text-field>
+        <v-text-field label="Currency To" v-model="currencyTo"></v-text-field>
+    </div>
+    <v-btn variant="outlined" color="primary" :loading="loading" @click="addChange">Agregar</v-btn>
+    <div>
+        
+        <v-list>
+            <v-list-item
+                v-for="item in changes"
+                :key="item.id"
+                variant="plain"
+            >
+                <template v-slot:title>
+                    <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between;">
+                        <span>{{item.currency_from}} a {{item.currency_to}}</span>
+                        <span style="display: flex; gap:5px;">
+                            <v-btn variant="outlined" color="blue">Actualizar</v-btn>
+                            <v-btn variant="outlined" color="red">Quitar</v-btn>
+                        </span>
+                    </div>
+                </template>
+                <template v-slot:subtitle>
+                    <span
+                        v-for="(rule, index) in item.rules"
+                        style="display: flex; align-items:center; flex-direction: row; gap: 10px;"
+                        >
+                        <v-text-field
+                            v-model="rule.deposit"
+                            type="number"
+                            min="0"
+                            density="compact"
+                            variant="outlined"
+                            style="padding: 0px; margin-top: 5px;"
+                            :disabled="index!=item.rules.length-1"
+                            hide-details
+                        >
+                            <template v-slot:prepend>
+                                <v-select 
+                                    variant="outlined"
+                                    v-model="rule.relation"
+                                    style="width: 200px;"
+                                    density="compact"
+                                    :items="optionsRelationChange"
+                                    :disabled="index!=item.rules.length-1"
+                                    hide-details
+                                >
+                                <template v-slot:prepend>
+                                    <label>Si Deposito</label>
+                                </template>
+                            </v-select>
+                            </template>
+                        </v-text-field>
+                        <v-text-field
+                            v-model="rule.value"
+                            type="number"
+                            label="Value"
+                            density="compact"
+                            variant="outlined"
+                            style="padding: 0px; margin-top: 5px;"
+                            :disabled="index!=item.rules.length-1"
+                            hide-details
+                        >
+                            <template v-slot:prepend >
+                                <v-select
+                                    label="Tipo"
+                                    v-model="rule.value_format"
+                                    style="width: 80px;"
+                                    density="compact"
+                                    :items="optionsTypeChange"
+                                    item-title="label"
+                                    item-value="value"
+                                    variant="outlined"
+                                    :disabled="index!=item.rules.length-1"
+                                    hide-details
+                                ></v-select>
+                            </template>
+                            <template v-slot:append-inner>
+                            </template>
+                        </v-text-field>
+                        <v-btn
+                            v-if="index==item.rules.length-1"
+                            color="blue"
+                            variant="outlined"
+                            :disabled="rule.deposit==0"
+                            @click="addRule(item.id)">
+                            <v-icon icon="mdi-plus"></v-icon>
+                        </v-btn>
+                        <v-btn 
+                            v-if="index!=item.rules.length-1"
+                            color="red"
+                            variant="outlined"
+                            @click="removeRule(item.id, index)"
+                        >
+                            <v-icon icon="mdi-minus"></v-icon>
+                        </v-btn>
+                    </span>
+                </template>
+        </v-list-item>
+        </v-list>
+    </div>
+</div>
