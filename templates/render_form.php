@@ -18,7 +18,7 @@
             <v-select
                 variant="outlined"
                 v-model="countryTo"
-                label="Pais de Destion"
+                label="Pais de Destino"
                 item-title="name"
                 :items="filteredCountriesTo"
             ></v-select>
