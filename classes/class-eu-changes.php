@@ -4,55 +4,75 @@ require_once 'class-eu-ajax-suport.php';
 
 class EuChanges {
 
-    public static function get_changes(){
-        EuAjaxData::get_option_content('eu_remesa_change_currency', '[]');
+    public static function get_changes($request){
+        $body = json_decode($request->get_body(),true);
+        if( true || EuAjaxData::is_token_valid( $body['token'] ) ) {
+            return EuAjaxData::get_option_content('eu_remesa_change_currency', '[]', false);
+        }
+        return [];
     }
 
-    public static function set_change(){
-        EuAjaxData::get_option_content('eu_remesa_change_currency', '[]',false);
+    public static function set_change($request){
+        $body = json_decode($request->get_body(),true);
+        $changes = EuAjaxData::get_option_content('eu_remesa_change_currency', '[]',false);
         $change = [
-            "id" => $_POST['currency_from'].$_POST['currency_to'],
-            "currency_from" => $_POST['currency_from'],
-            "currency_to" => $_POST['currency_to'],
+            "id" => $body['currency_from'].$body['currency_to'],
+            "currency_from" => $body['currency_from'],
+            "currency_to" => $body['currency_to'],
+            "price" => $body['price'],
             "rules" => []
         ];
-        $new_changes = json_encode([...$changes, $change]);
-        update_option('eu_remesa_change_currency', $new_changes);
-        echo $new_changes;
-        die();
+        
+        $new_changes = [...$changes, $change];
+        update_option('eu_remesa_change_currency', json_encode( $new_changes) );
+        return $new_changes;
     }
 
-    public static function add_rule(){
+    public static function remove_change($request){
+        $body = json_decode($request->get_body(),true);
+        $changes = EuAjaxData::get_option_content('eu_remesa_change_currency', '[]',false);
         $new_changes = [];
+        foreach($changes as $change ) {
+            if( $body['id']!=$change['id'] ) {
+                $new_changes[] = $change;
+            }
+        }
+        update_option('eu_remesa_change_currency', json_encode( $new_changes) );
+        return $new_changes;
+    }
+
+    public static function add_rule($request){
+        $new_changes = [];
+        $body = json_decode($request->get_body(),true);
         $changes = EuAjaxData::get_option_content('eu_remesa_change_currency', '[]',false);
         foreach( $changes as $change ){
-            if( $change['id'] === $_POST['id'] ) {
+            if( $change['id'] === $body['id'] ) {
                 $new_changes[] = $change;
                 $index = count($new_changes);
                 $new_changes[$index - 1]["rules"][] = [
-                    "relation" => $_POST["relation"],
-                    "deposit" => $_POST["deposit"],
-                    "value_format" => $_POST["value_format"],
-                    "value" => $_POST["value"]
+                    "relation" => $body["relation"],
+                    "deposit" => $body["deposit"],
+                    "value_format" => $body["value_format"],
+                    "value" => $body["value"]
                 ];
             }else{
                 $new_changes[] = $change;
             }
         }
         update_option('eu_remesa_change_currency', json_encode($new_changes));
-        echo json_encode($new_changes);
-        die();
+        return $new_changes;
     }
 
-    public static function remove_rule(){
+    public static function remove_rule($request){
         $new_changes = [];
+        $body = json_decode($request->get_body(),true);
         $changes = EuAjaxData::get_option_content('eu_remesa_change_currency', '[]',false);
         foreach( $changes as $change ){
-            if( $change['id'] === $_POST['id'] ) {
+            if( $change['id'] === $body['id'] ) {
                 $new_rules = [];
                 $index = 0;
                 foreach( $change["rules"] as $rule ) {
-                    if( $index != $_POST['index'] ) {
+                    if( $index != $body['index'] ) {
                         $new_rules[] = $rule;
                     }
                     $index++;
@@ -61,6 +81,7 @@ class EuChanges {
                     "id" => $change['id'],
                     "currency_from" => $change['currency_from'],
                     "currency_to" => $change['currency_to'],
+                    "price" => $change['price'],
                     "rules" => $new_rules
                 ];
             }else{
@@ -68,7 +89,6 @@ class EuChanges {
             }
         }
         update_option('eu_remesa_change_currency', json_encode($new_changes));
-        echo json_encode($new_changes);
-        die();
+        return $new_changes;
     }
 }
