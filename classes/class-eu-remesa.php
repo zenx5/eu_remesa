@@ -1,6 +1,7 @@
 <?php 
 
 require_once 'class-eu-changes.php';
+require_once 'class-eu-operations.php';
 require_once 'class-eu-app-template.php';
 require_once 'class-eu-jwt.php';
 
@@ -27,20 +28,100 @@ class EuRemesa {
         add_shortcode('remesa-form', array('EuAppTemplate', 'render_form'));
         add_action('admin_menu', ['EuRemesa','admin_menu']);
         add_action('wp_ajax_save_rate', ['EuRemesa','save_rate']);
-        
-        add_action('wp_ajax_get_changes', ['EuChanges','get_changes']);
-        add_action('wp_ajax_set_change', ['EuChanges','set_change']);
-        add_action('wp_ajax_add_rule', ['EuChanges','add_rule']);
-        add_action('wp_ajax_remove_rule', ['EuChanges','remove_rule']);
 
-        add_action('wp_ajax_save_found', ['EuRemesa','save_found']);
-        add_action('wp_ajax_get_rate', ['EuRemesa','get_rate']);
-        add_action('wp_ajax_get_found', ['EuRemesa','get_found']);
-        add_action('wp_ajax_get_found_of', ['EuRemesa','get_found_of']);
-        add_action('wp_ajax_send_confirm', ['EuRemesa','send_confirm']);
-        add_action('wp_ajax_get_confirms', ['EuRemesa','get_confirms']);
-        add_action('wp_ajax_reset_all', ['EuRemesa','reset_all']);
+        add_action('rest_api_init',['EuRemesa','api_rest']);
     }
+
+    public static function api_rest(){
+        $methods_changes = [
+            'get_changes',
+            'set_change',
+            'remove_change',
+            'add_rule',
+            'remove_rule'
+        ];
+        $methods_operations = [
+            'get_operations',
+            'set_operation',
+            'remove_operation'
+        ];
+        $methods_others = [
+            'save_found',
+            'get_rate',
+            'get_found',
+            'get_found_of',
+            'send_confirm',
+            'get_confirms',
+            'reset_all',
+            'get_currencies',
+            'set_currency',
+            'remove_currency',
+        ];
+        register_rest_route("remesa/v1", 'status', array(
+            'methods' => 'get',
+            'callback' => function(){
+                return [
+                    "status" => "Running"
+                ];
+            }
+        ));
+        foreach( $methods_changes as $method) {
+            register_rest_route("remesa/v1", $method, array(
+                'methods' => 'post',
+                'callback' => ['EuChanges', $method]
+            ));
+        }
+        foreach( $methods_operations as $method) {
+            register_rest_route("remesa/v1", $method, array(
+                'methods' => 'post',
+                'callback' => ['EuOperations', $method]
+            ));
+        }
+        
+        foreach( $methods_others as $method) {
+            register_rest_route("remesa/v1", $method, array(
+                'methods' => 'post',
+                'callback' => ['EuRemesa', $method]
+            ));
+        }
+
+    }
+
+    public static function get_currencies($request) {
+        $body = json_decode($request->get_body(),true);
+        if( true  ) { // self::is_token_valid( $body['token'] )
+            return self::get_option_content('eu_remesa_currencies', '[]', false);
+        }
+        return [];
+    }
+
+    public static function set_currency($request) {
+        $body = json_decode($request->get_body(),true);
+        $currencies = EuAjaxData::get_option_content('eu_remesa_currencies', '[]',false);
+        $currency = [
+            "name"      => $body["name"],
+            "founds"    => $body["founds"],
+            "symbol"    => $body["symbol"]
+        ];
+        
+        $new_currencies = [...$currencies, $currency];
+        update_option('eu_remesa_currencies', json_encode( $new_currencies ) );
+        return $new_currencies;
+    }
+
+    public static function remove_currency($request) {
+        $body = json_decode($request->get_body(),true);
+        $currencies = EuAjaxData::get_option_content('eu_remesa_currencies', '[]',false);
+        $new_currencies = [];
+        foreach($currencies as $currency ) {
+            if( $body['name']!=$currency['name'] ) {
+                $new_currencies[] = $currency;
+            }
+        }
+        update_option('eu_remesa_currencies', json_encode( $new_currencies) );
+        return $new_currencies;
+    }
+
 
     public static function create_token(){
         $jwt = new EuJWT('eu-remesa', [
@@ -58,18 +139,16 @@ class EuRemesa {
         die();
     }
 
-    private static function is_token_valid(){
-        $token = new EuJWT($_POST['token']);
-        $data = $token->getData($_POST['token']);
+    private static function is_token_valid($request_token){
+        return true;
+        $token = new EuJWT($request_token);
+        $data = $token->getData($request_token);
         $diff = date_diff( $data->checkpoint, date("h:i:sa") );
         return floatval($diff->i) < self::$defualt_timeout;
     }
 
     private static function get_option_content($tag, $default_value, $is_echo = true){
-        $result = $default_value;
-        if( self::is_token_valid() ) {
-            $result = get_option($tag, $default_value);
-        }
+        $result = get_option($tag, $default_value);
         if( !$is_echo ) {
             return json_decode($result,true);
         }
@@ -77,44 +156,61 @@ class EuRemesa {
         die();
     }
 
-    public static function get_rate(){
-        self::get_option_content('eu_remesa_rates', self::$default_rate);
+    public static function get_rate($request){
+        $body = json_decode($request->get_body(),true);
+        if( self::is_token_valid( $body['token'] ) ) {
+            return self::get_option_content('eu_remesa_rates', self::$default_rate, false);
+        }
+        return self::$default_rate;
     }
 
     public static function get_found(){
-        self::get_option_content('eu_remesa_founds', self::$default_found);
+        $body = json_decode($request->get_body(),true);
+        if( self::is_token_valid( $body['token'] ) ) {
+            return self::get_option_content('eu_remesa_founds', self::$default_found, false);
+        }
+        return self::$default_found;
     }
 
     public static function get_confirms(){
-        self::get_option_content('eu_remesa_confirms', '[]');
+        $body = json_decode($request->get_body(),true);
+        if( self::is_token_valid( $body['token'] ) ) {
+            return self::get_option_content('eu_remesa_confirms', '[]', false);
+        }
+        return [];
     }
 
     public static function get_pendings(){
-        self::get_option_content('eu_remesa_pending', '[]');
+        $body = json_decode($request->get_body(),true);
+        if( self::is_token_valid( $body['token'] ) ) {
+            return self::get_option_content('eu_remesa_pending', '[]', false);
+        }
+        return [];
     }
 
-    public static function send_confirm(){
-        if( isset($_POST['currency_from']) && isset($_POST['mount_from']) && isset($_POST['reference'])  ){
+    public static function send_confirm($request){
+        $body = json_decode($request->get_body(),true);
+        if( isset($body['currency_from']) && isset($body['mount_from']) && isset($body['reference'])  ){
             $confirm = [
-                "currency_from" => $_POST['currency_from'],
-                "mount_from" => $_POST['mount_from'],
-                "currency_to" => $_POST['currency_to'],
-                "mount_to" => $_POST['mount_to'],
-                "reference" => $_POST['reference']
+                "currency_from" => $body['currency_from'],
+                "mount_from" => $body['mount_from'],
+                "currency_to" => $body['currency_to'],
+                "mount_to" => $body['mount_to'],
+                "reference" => $body['reference']
             ];
             $confirms = json_decode( get_option('eu_remesa_confirms','[]'), true );
             update_option('eu_remesa_confirms', json_encode([...$confirms, $confirm]) );
         }
-        echo json_encode([
+        return [
             "message" => "Esperando confirmacion",
             "code" => 0
-        ]);
-        die();        
+        ];
     }
 
-    public static function get_found_of(){
-        $mount      = floatval( $_POST['mount'] );
-        $currency   = $_POST['currency'];
+    public static function get_found_of($request){
+        $body = json_decode($request->get_body(),true);
+        $mount      = floatval( $body['mount'] );
+        $currency   = $body['currency'];
         $founds     = json_decode( get_option('eu_remesa_founds', EuRemesa::$default_found), true );
 
         $pendings = json_decode( get_option('eu_remesa_pending','[]'), true );
@@ -134,41 +230,39 @@ class EuRemesa {
             ];
             update_option('eu_remesa_pending', json_encode([...$pendings, $new_pending]) );
         } 
-        echo json_encode([
+        return [
             "currency" => $currency,
             "founds" => $mount_avalaible,
             "avalaible" => $mount_avalaible >= $mount,
             "pending" => $new_pending
-        ]);
-        die();
+        ];
     }
 
-    public static function save_rate(){
-        // $_POST['token']
+    public static function save_rate($request){
+        $body = json_decode($request->get_body(),true);
         $oldrates = json_decode( get_option('eu_remesa_rates', EuRemesa::$default_rate) );
         $rates = [
-            "vef" => isset($_POST['vef']) ? $_POST['vef'] : $oldrates->vef,
-            "brl" => isset($_POST['brl']) ? $_POST['brl'] : $oldrates->brl,
-            "cop" => isset($_POST['cop']) ? $_POST['cop'] : $oldrates->cop,
-            "ars" => isset($_POST['ars']) ? $_POST['ars'] : $oldrates->ars
+            "vef" => isset($body['vef']) ? $body['vef'] : $oldrates->vef,
+            "brl" => isset($body['brl']) ? $body['brl'] : $oldrates->brl,
+            "cop" => isset($body['cop']) ? $body['cop'] : $oldrates->cop,
+            "ars" => isset($body['ars']) ? $body['ars'] : $oldrates->ars
         ];
         update_option('eu_remesa_rates', json_encode($rates) );
-        echo json_encode($rates);
-        die();
+        return $rates;
     }
 
-    public static function save_found(){
+    public static function save_found($request){
+        $body = json_decode($request->get_body(),true);
         $oldfounds = json_decode( get_option('eu_remesa_founds', EuRemesa::$default_found) );
         $founds = [
-            "usd" => isset($_POST['usd']) ? $_POST['usd'] : $oldfounds->usd,
-            "vef" => isset($_POST['vef']) ? $_POST['vef'] : $oldfounds->vef,
-            "brl" => isset($_POST['brl']) ? $_POST['brl'] : $oldfounds->brl,
-            "cop" => isset($_POST['cop']) ? $_POST['cop'] : $oldfounds->cop,
-            "ars" => isset($_POST['ars']) ? $_POST['ars'] : $oldfounds->ars
+            "usd" => isset($body['usd']) ? $body['usd'] : $oldfounds->usd,
+            "vef" => isset($body['vef']) ? $body['vef'] : $oldfounds->vef,
+            "brl" => isset($body['brl']) ? $body['brl'] : $oldfounds->brl,
+            "cop" => isset($body['cop']) ? $body['cop'] : $oldfounds->cop,
+            "ars" => isset($body['ars']) ? $body['ars'] : $oldfounds->ars
         ];
         update_option('eu_remesa_founds', json_encode($founds) );
-        echo json_encode($founds);
-        die();
+        return $founds;
     }
 
     public static function admin_menu()
