@@ -43,6 +43,7 @@ class EuRemesa {
         $methods_operations = [
             'get_operations',
             'set_operation',
+            'validate_operation',
             'remove_operation'
         ];
         $methods_others = [
@@ -73,7 +74,7 @@ class EuRemesa {
         }
         foreach( $methods_operations as $method) {
             register_rest_route("remesa/v1", $method, array(
-                'methods' => 'post',
+                'methods' => 'get, post',
                 'callback' => ['EuOperations', $method]
             ));
         }
@@ -96,15 +97,29 @@ class EuRemesa {
     }
 
     public static function set_currency($request) {
+        $updated = false;
         $body = json_decode($request->get_body(),true);
         $currencies = EuAjaxData::get_option_content('eu_remesa_currencies', '[]',false);
-        $currency = [
-            "name"      => $body["name"],
-            "founds"    => $body["founds"],
-            "symbol"    => $body["symbol"]
-        ];
-        
-        $new_currencies = [...$currencies, $currency];
+        $new_currencies = [];
+        foreach( $currencies as $item ) {
+            if( $body["name"]===$item["name"] ) {
+                $updated = true;
+                $new_currencies[] = [
+                    "name"      => $body["name"],
+                    "founds"    => $body["founds"],
+                    "symbol"    => $body["symbol"]
+                ];
+            } else {
+                $new_currencies[] = $item;
+            }
+        }
+        if( !$updated ) {
+            $new_currencies[] = [
+                "name"      => $body["name"],
+                "founds"    => $body["founds"],
+                "symbol"    => $body["symbol"]
+            ];
+        }
         update_option('eu_remesa_currencies', json_encode( $new_currencies ) );
         return $new_currencies;
     }
